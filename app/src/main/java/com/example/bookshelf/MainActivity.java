@@ -50,8 +50,6 @@ public class MainActivity extends AppCompatActivity implements BookListFragment.
     boolean serviceBound = false;
     SeekBar seekbar;
     Handler handler;
-    Runnable runnable;
-
 
     private final String SEARCH_API = "https://kamorris.com/lab/abp/booksearch.php?search=";
 
@@ -60,16 +58,15 @@ public class MainActivity extends AppCompatActivity implements BookListFragment.
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+
         searchEditText = findViewById(R.id.searchEditText);
         AudiobookService.MediaControlBinder.getCallingUid();
-
         Context context=getApplication();
         Intent intent = new Intent(this,AudiobookService.class);
-        bindService(intent,serviceConnection,Context.BIND_AUTO_CREATE);
 
+        bindService(intent,serviceConnection,Context.BIND_AUTO_CREATE);
         handler = new Handler();
         seekbar = (SeekBar) findViewById(R.id.seekBar);
-
         seekbar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
@@ -87,8 +84,6 @@ public class MainActivity extends AppCompatActivity implements BookListFragment.
 
             }
         });
-
-
         playButton= findViewById(R.id.playbutton);
         pauseButton= findViewById(R.id.pausebutton);
         stopButton= findViewById(R.id.stopbutton);
@@ -110,60 +105,31 @@ public class MainActivity extends AppCompatActivity implements BookListFragment.
                 onStopSelected();
             }
         });
-
-        /*
-        Perform a search
-         */
         findViewById(R.id.searchButton).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 fetchBooks(searchEditText.getText().toString());
             }
         });
-
-        /*
-        If we previously saved a book search and/or selected a book, then use that
-        information to set up the necessary instance variables
-         */
         if (savedInstanceState != null) {
             books = savedInstanceState.getParcelableArrayList(BOOKS_KEY);
             selectedBook = savedInstanceState.getParcelable(SELECTED_BOOK_KEY);
         }
         else
             books = new ArrayList<Book>();
-
-        twoPane = findViewById(R.id.container2) != null;
-        fm = getSupportFragmentManager();
-
-        requestQueue = Volley.newRequestQueue(this);
-
-        /*
-        Get an instance of BookListFragment with an empty list of books
-        if we didn't previously do a search, or use the previous list of
-        books if we had previously performed a search
-         */
-        bookListFragment = BookListFragment.newInstance(books);
-
-        fm.beginTransaction()
-                .replace(R.id.container1, bookListFragment)
-        .commit();
-
-        /*
-        If we have two containers available, load a single instance
-        of BookDetailsFragment to display all selected books.
-
-        If a book was previously selected, show that book in the book details fragment
-        *NOTE* we could have simplified this to a single line by having the
-        fragment's newInstance() method ignore a null reference, but this way allow
-        us to limit the amount of things we have to change in the Fragment's implementation.
-         */
-        if (twoPane) {
-            if (selectedBook != null)
-                bookDetailsFragment = BookDetailsFragment.newInstance(selectedBook);
-            else
-                bookDetailsFragment = new BookDetailsFragment();
-
+            twoPane = findViewById(R.id.container2) != null;
+            fm = getSupportFragmentManager();
+            requestQueue = Volley.newRequestQueue(this);
+            bookListFragment = BookListFragment.newInstance(books);
             fm.beginTransaction()
+                .replace(R.id.container1, bookListFragment)
+            .commit();
+        if (twoPane) {
+            if (selectedBook != null) {
+                bookDetailsFragment = BookDetailsFragment.newInstance(selectedBook);
+            }else
+                bookDetailsFragment = new BookDetailsFragment();
+                fm.beginTransaction()
                     .replace(R.id.container2, bookDetailsFragment)
                     .commit();
         } else {
@@ -177,14 +143,7 @@ public class MainActivity extends AppCompatActivity implements BookListFragment.
         }
     }
 
-    /*
-    Fetch a set of "books" from from the web service API
-     */
     private void fetchBooks(String searchString) {
-        /*
-        A Volloy JSONArrayRequest will automatically convert a JSON Array response from
-        a web server to an Android JSONArray object
-         */
         JsonArrayRequest jsonArrayRequest = new JsonArrayRequest(SEARCH_API + searchString, new Response.Listener<JSONArray>() {
             @Override
             public void onResponse(JSONArray response) {
@@ -214,33 +173,20 @@ public class MainActivity extends AppCompatActivity implements BookListFragment.
             }
         });
         requestQueue.add(jsonArrayRequest);
-    };
-
+    }
     private void updateBooksDisplay() {
-        /*
-        Remove the BookDetailsFragment from the container after a search
-        if it is the currently attached fragment
-         */
         if (fm.findFragmentById(R.id.container1) instanceof BookDetailsFragment)
             fm.popBackStack();
         bookListFragment.updateBooksDisplay(books);
     }
-
     @Override
     public void bookSelected(int index) {
         selectedBook = books.get(index);
-        if (twoPane)
-            /*
-            Display selected book using previously attached fragment
-             */
+        if (twoPane) {
             bookDetailsFragment.displayBook(selectedBook);
-        else {
-            /*
-            Display book using new fragment
-             */
+        }else {
             fm.beginTransaction()
                     .replace(R.id.container1, BookDetailsFragment.newInstance(selectedBook))
-                    // Transaction is reversible
                     .addToBackStack(null)
                     .commit();
         }
@@ -248,19 +194,13 @@ public class MainActivity extends AppCompatActivity implements BookListFragment.
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-
-        // Save previously searched books as well as selected book
         outState.putParcelableArrayList(BOOKS_KEY, books);
         outState.putParcelable(SELECTED_BOOK_KEY, selectedBook);
     }
-
-    //Binding this Client to the AudioPlayer Service
     private ServiceConnection serviceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
-            // We've bound to LocalService, cast the IBinder and get LocalService instance
             AudiobookService.MediaControlBinder binder = (AudiobookService.MediaControlBinder) service;
-            binder.play(0);
             serviceBound = true;
         }
         @Override
@@ -281,15 +221,16 @@ public class MainActivity extends AppCompatActivity implements BookListFragment.
     }
 
     private void onPlaySelected(){
-        Toast.makeText(getApplicationContext(),"play selected",Toast.LENGTH_LONG).show();
-        binder.play(0);
+        binder.play(0 );
 
     }
     private void onPauseSelected(){
-        Toast.makeText(getApplicationContext(),"pause selected",Toast.LENGTH_LONG).show();
+        binder.pause();
     }
     private void onStopSelected(){
-        Toast.makeText(getApplicationContext(),"stop selected",Toast.LENGTH_LONG).show();
+        binder.stop();
+        serviceBound = false;
+        player.onDestroy();
     }
 
 }

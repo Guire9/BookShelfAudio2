@@ -16,12 +16,12 @@ import com.squareup.picasso.Picasso;
 
 import java.util.HashMap;
 
-
 public class BookDetailsFragment extends Fragment {
 
     private static final String BOOK_KEY = "book";
+    private static final String BOOLEAN_KEY= "true";
+    boolean playing=false;
     private Book book;
-
     TextView titleTextView, authorTextView;
     ImageView coverImageView;
 
@@ -42,7 +42,6 @@ public class BookDetailsFragment extends Fragment {
             book = (Book) getArguments().getParcelable(BOOK_KEY);
         }
     }
-
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
@@ -51,18 +50,11 @@ public class BookDetailsFragment extends Fragment {
         titleTextView = v.findViewById(R.id.titleTextView);
         authorTextView = v.findViewById(R.id.authorTextView);
         coverImageView = v.findViewById(R.id.coverImageView);
-
-        /*
-        Because this fragment can be created with or without
-        a book to display when attached, we need to make sure
-        we don't try to display a book if one isn't provided
-         */
-        final int x =0;
         Button b2 = v.findViewById(R.id.button2);
         b2.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Toast.makeText(getActivity(),String.valueOf(x),Toast.LENGTH_LONG).show();
+                playing = true;
             }
         });
 
@@ -74,9 +66,17 @@ public class BookDetailsFragment extends Fragment {
     public void displayBook(Book book) {
         titleTextView.setText(book.getTitle());
         authorTextView.setText(book.getAuthor());
-        // Picasso simplifies image loading from the web.
-        // No need to download separately.
         Picasso.get().load(book.getCoverUrl()).into(coverImageView);
     }
+
+    public boolean getBoolean(){
+        return playing;
+    }
+
+
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putSerializable(BOOLEAN_KEY,playing);
+    }
 }
-//test
